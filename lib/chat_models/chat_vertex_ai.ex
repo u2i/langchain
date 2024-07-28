@@ -124,20 +124,23 @@ defmodule LangChain.ChatModels.ChatVertexAI do
   end
 
   def for_api(%ChatVertexAI{} = vertex_ai, messages, functions) do
+    {system_message, other_messages} = extract_system_message(messages)
+
     messages_for_api =
-      messages
+      other_messages
       |> Enum.map(&for_api/1)
       |> List.flatten()
-      |> List.wrap()
 
     req = %{
-      "contents" => messages_for_api,
       "generationConfig" => %{
         "temperature" => vertex_ai.temperature,
         "topP" => vertex_ai.top_p,
         "topK" => vertex_ai.top_k
       }
     }
+
+    req = maybe_add_system_instruction(req, system_message)
+    req = maybe_add_contents(req, messages_for_api)
 
     req =
       if vertex_ai.json_response do
@@ -151,8 +154,6 @@ defmodule LangChain.ChatModels.ChatVertexAI do
       req
       |> Map.put("tools", [
         %{
-          # Google AI functions use an OpenAI compatible format.
-          # See: https://ai.google.dev/docs/function_calling#how_it_works
           "functionDeclarations" => Enum.map(functions, &ChatOpenAI.for_api/1)
         }
       ])
@@ -160,6 +161,26 @@ defmodule LangChain.ChatModels.ChatVertexAI do
       req
     end
   end
+
+  defp extract_system_message(messages) do
+    Enum.split_with(messages, fn
+      %Message{role: :system} -> true
+      _ -> false
+    end)
+  end
+
+  defp maybe_add_system_instruction(req, []) do
+    req
+  end
+
+  defp maybe_add_system_instruction(req, [%Message{role: :system, content: content} | _]) do
+    Map.put(req, "systemInstruction", %{
+      "parts" => [%{"text" => content}]
+    })
+  end
+
+  defp maybe_add_contents(req, []), do: Map.put(req, "contents", [])
+  defp maybe_add_contents(req, messages), do: Map.put(req, "contents", messages)
 
   defp for_api(%Message{role: :assistant} = message) do
     content_parts = get_message_contents(message) || []
@@ -176,21 +197,6 @@ defmodule LangChain.ChatModels.ChatVertexAI do
       "role" => map_role(:tool),
       "parts" => Enum.map(message.tool_results, &for_api/1)
     }
-  end
-
-  defp for_api(%Message{role: :system} = message) do
-    # No system messages support means we need to fake a prompt and response
-    # to pretend like it worked.
-    [
-      %{
-        "role" => :user,
-        "parts" => [%{"text" => message.content}]
-      },
-      %{
-        "role" => :model,
-        "parts" => [%{"text" => ""}]
-      }
-    ]
   end
 
   defp for_api(%Message{role: :user, content: content}) when is_list(content) do
@@ -578,7 +584,6 @@ defmodule LangChain.ChatModels.ChatVertexAI do
     case role do
       :assistant -> :model
       :tool -> :function
-      # System prompts are not supported yet. Google recommends using user prompt.
       :system -> :user
       role -> role
     end
