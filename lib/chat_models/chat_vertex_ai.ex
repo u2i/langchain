@@ -6,7 +6,7 @@ defmodule LangChain.ChatModels.ChatVertexAI do
 
   ## Safety Settings
 
-  This module sets all safety thresholds to "BLOCK_NONE". This aligns with
+  This module sets all safety thresholds to "BLOCK_ONLY_HIGH". This aligns with
   the behavior of other models supported by this API. The following safety
   categories are set to not block any content:
 
@@ -202,10 +202,10 @@ defmodule LangChain.ChatModels.ChatVertexAI do
         "contents" => messages_for_api,
         "generationConfig" => generation_config_params,
         "safetySettings" => [
-          %{"category" => "HARM_CATEGORY_HATE_SPEECH", "threshold" => "BLOCK_NONE"},
-          %{"category" => "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold" => "BLOCK_NONE"},
-          %{"category" => "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold" => "BLOCK_NONE"},
-          %{"category" => "HARM_CATEGORY_HARASSMENT", "threshold" => "BLOCK_NONE"}
+          %{"category" => "HARM_CATEGORY_HATE_SPEECH", "threshold" => "BLOCK_ONLY_HIGH"},
+          %{"category" => "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold" => "BLOCK_ONLY_HIGH"},
+          %{"category" => "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold" => "BLOCK_ONLY_HIGH"},
+          %{"category" => "HARM_CATEGORY_HARASSMENT", "threshold" => "BLOCK_ONLY_HIGH"}
         ]
       }
       |> Utils.conditionally_add_to_map("system_instruction", for_api(sys_instructions))
