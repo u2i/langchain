@@ -1,42 +1,36 @@
 defmodule LangChain.ChatModels.ChatVertexAI do
   @moduledoc """
-  Parses and validates inputs for making a request for the Google AI  Chat API.
+  Parses and validates inputs for making requests to the Google AI Chat API.
 
-  Converts response into more specialized `LangChain` data structures.
+  Converts responses into specialized `LangChain` data structures.
 
-  Example Usage:
+  ## Safety Settings
 
-  ```elixir
-  alias LangChain.Chains.LLMChain
-  alias LangChain.Message
-  alias LangChain.Message.ContentPart
-  alias LangChain.ChatModels.ChatVertexAI
+  This module sets all safety thresholds to "BLOCK_NONE". This aligns with
+  the behavior of other models supported by this API. The following safety
+  categories are set to not block any content:
 
-  config = %{
-        model: "gemini-2.0-flash",
-        api_key: ..., # vertex requires gcloud auth token https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts/quickstart-multimodal#rest
-        temperature: 1.0,
-        top_p: 0.8,
-        receive_timeout: ...
-      }
-   model = ChatVertexAI.new!(config)
+  - HARM_CATEGORY_HATE_SPEECH
+  - HARM_CATEGORY_DANGEROUS_CONTENT
+  - HARM_CATEGORY_SEXUALLY_EXPLICIT
+  - HARM_CATEGORY_HARASSMENT
 
-      %{llm: model, verbose: false, stream: false}
-      |> LLMChain.new!()
-      |> LLMChain.add_message(
-        Message.new_user!([
-          ContentPart.new!(%{type: :text, content: "Analyse the provided file and share a summary"}),
-          ContentPart.new!(%{
-            type: :file_url,
-            content: ...,
-            options: [media: ...]
-          })
-        ])
-      )
-      |> LLMChain.run()
-  The above call will return summary of the media content.
-  ```
+  Note that this configuration removes all content filtering provided by the
+  Google AI Chat API. Implement appropriate safeguards in your application if
+  needed.
+
+  ## System Messages
+
+  System messages are supported and included in the request as "systemInstruction".
+
+  ## Function Calling
+
+  Function calling is supported, enabling the model to request the execution
+  of specific functions in response to queries. Function declarations are
+  included in the request when provided.
+
   """
+
   use Ecto.Schema
   require Logger
   import Ecto.Changeset
