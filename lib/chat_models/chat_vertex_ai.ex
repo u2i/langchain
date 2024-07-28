@@ -1,9 +1,36 @@
 defmodule LangChain.ChatModels.ChatVertexAI do
   @moduledoc """
-  Parses and validates inputs for making a request for the Google AI  Chat API.
+  Parses and validates inputs for making requests to the Google AI Chat API.
 
-  Converts response into more specialized `LangChain` data structures.
+  Converts responses into specialized `LangChain` data structures.
+
+  ## Safety Settings
+
+  This module sets all safety thresholds to "BLOCK_NONE". This aligns with
+  the behavior of other models supported by this API. The following safety
+  categories are set to not block any content:
+
+  - HARM_CATEGORY_HATE_SPEECH
+  - HARM_CATEGORY_DANGEROUS_CONTENT
+  - HARM_CATEGORY_SEXUALLY_EXPLICIT
+  - HARM_CATEGORY_HARASSMENT
+
+  Note that this configuration removes all content filtering provided by the
+  Google AI Chat API. Implement appropriate safeguards in your application if
+  needed.
+
+  ## System Messages
+
+  System messages are supported and included in the request as "systemInstruction".
+
+  ## Function Calling
+
+  Function calling is supported, enabling the model to request the execution
+  of specific functions in response to queries. Function declarations are
+  included in the request when provided.
+
   """
+
   use Ecto.Schema
   require Logger
   import Ecto.Changeset
