@@ -206,7 +206,13 @@ defmodule LangChain.ChatModels.ChatVertexAI do
     req =
       %{
         "contents" => messages_for_api,
-        "generationConfig" => generation_config_params
+        "generationConfig" => generation_config_params,
+        "safetySettings" => [
+          %{"category" => "HARM_CATEGORY_HATE_SPEECH", "threshold" => "BLOCK_NONE"},
+          %{"category" => "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold" => "BLOCK_NONE"},
+          %{"category" => "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold" => "BLOCK_NONE"},
+          %{"category" => "HARM_CATEGORY_HARASSMENT", "threshold" => "BLOCK_NONE"}
+        ]
       }
       |> Utils.conditionally_add_to_map("system_instruction", for_api(sys_instructions))
 
