@@ -136,7 +136,25 @@ defmodule LangChain.ChatModels.ChatVertexAI do
         "temperature" => vertex_ai.temperature,
         "topP" => vertex_ai.top_p,
         "topK" => vertex_ai.top_k
-      }
+      },
+      "safetySettings" => [
+        %{
+          "category" => "HARM_CATEGORY_HATE_SPEECH",
+          "threshold" => "BLOCK_NONE"
+        },
+        %{
+          "category" => "HARM_CATEGORY_DANGEROUS_CONTENT",
+          "threshold" => "BLOCK_NONE"
+        },
+        %{
+          "category" => "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          "threshold" => "BLOCK_NONE"
+        },
+        %{
+          "category" => "HARM_CATEGORY_HARASSMENT",
+          "threshold" => "BLOCK_NONE"
+        }
+      ]
     }
 
     req = maybe_add_system_instruction(req, system_message)

@@ -157,6 +157,37 @@ defmodule ChatModels.ChatVertexAITest do
                ]
              } = tool_call
     end
+
+    test "includes safety settings in the API request", %{vertex_ai: vertex_ai} do
+      data = ChatVertexAI.for_api(vertex_ai, [], [])
+
+      assert %{
+               "contents" => [],
+               "generationConfig" => _,
+               "safetySettings" => safety_settings
+             } = data
+
+      expected_safety_settings = [
+        %{
+          "category" => "HARM_CATEGORY_HATE_SPEECH",
+          "threshold" => "BLOCK_NONE"
+        },
+        %{
+          "category" => "HARM_CATEGORY_DANGEROUS_CONTENT",
+          "threshold" => "BLOCK_NONE"
+        },
+        %{
+          "category" => "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          "threshold" => "BLOCK_NONE"
+        },
+        %{
+          "category" => "HARM_CATEGORY_HARASSMENT",
+          "threshold" => "BLOCK_NONE"
+        }
+      ]
+
+      assert safety_settings == expected_safety_settings
+    end
   end
 
   describe "do_process_response/2" do
