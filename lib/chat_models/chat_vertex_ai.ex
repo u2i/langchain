@@ -93,6 +93,10 @@ defmodule LangChain.ChatModels.ChatVertexAI do
 
     # A list of maps for callback handlers
     field :callbacks, {:array, :map}, default: []
+
+    # The type of resource being accessed: :model (default) for standard models,
+    # :endpoint for fine-tuned/custom endpoints
+    field :endpoint_type, Ecto.Enum, values: [:model, :endpoint], default: :model
   end
 
   @type t :: %ChatVertexAI{}
@@ -107,7 +111,8 @@ defmodule LangChain.ChatModels.ChatVertexAI do
     :receive_timeout,
     :stream,
     :json_response,
-    :callbacks
+    :callbacks,
+    :endpoint_type
   ]
   @required_fields [
     :endpoint,
@@ -420,8 +425,12 @@ defmodule LangChain.ChatModels.ChatVertexAI do
   end
 
   @spec build_url(t()) :: String.t()
-  defp build_url(%ChatVertexAI{endpoint: endpoint, model: model} = vertex_ai) do
-    "#{endpoint}/models/#{model}:#{get_action(vertex_ai)}"
+  defp build_url(%ChatVertexAI{endpoint: endpoint, model: model, endpoint_type: endpoint_type} = vertex_ai) do
+    resource_path = case endpoint_type do
+      :endpoint -> "endpoints"
+      _ -> "models"
+    end
+    "#{endpoint}/#{resource_path}/#{model}:#{get_action(vertex_ai)}"
     |> use_sse(vertex_ai)
   end
 
@@ -654,7 +663,8 @@ defmodule LangChain.ChatModels.ChatVertexAI do
         :top_k,
         :receive_timeout,
         :json_response,
-        :stream
+        :stream,
+        :endpoint_type
       ],
       @current_config_version
     )
