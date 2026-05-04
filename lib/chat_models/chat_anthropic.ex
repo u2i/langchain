@@ -496,6 +496,7 @@ defmodule LangChain.ChatModels.ChatAnthropic do
   alias LangChain.Callbacks
   alias LangChain.Utils.BedrockStreamDecoder
   alias LangChain.Utils.BedrockConfig
+  alias LangChain.Utils.VertexAnthropicConfig
 
   @behaviour ChatModel
 
@@ -518,6 +519,12 @@ defmodule LangChain.ChatModels.ChatAnthropic do
 
     # Configuration for AWS Bedrock. Configure this instead of endpoint & api_key if you want to use Bedrock.
     embeds_one :bedrock, BedrockConfig
+
+    # Configuration for Google Cloud Vertex AI's Anthropic Model Garden.
+    # Configure this instead of endpoint & api_key to route requests through
+    # Vertex's `publishers/anthropic/models/...` endpoint with a gcloud
+    # bearer token.
+    embeds_one :vertex, VertexAnthropicConfig
 
     # API key for Anthropic. If not set, will use global api key. Allows for usage
     # of a different API key per-call if desired. For instance, allowing a
@@ -643,6 +650,7 @@ defmodule LangChain.ChatModels.ChatAnthropic do
     %ChatAnthropic{}
     |> cast(attrs, @create_fields)
     |> cast_embed(:bedrock)
+    |> cast_embed(:vertex)
     |> common_validation()
     |> apply_action(:insert)
   end
@@ -728,6 +736,7 @@ defmodule LangChain.ChatModels.ChatAnthropic do
     |> Utils.conditionally_add_to_map(:output_config, set_output_config(anthropic))
     |> Utils.conditionally_add_to_map(:cache_control, anthropic.cache_control)
     |> maybe_transform_for_bedrock(anthropic.bedrock)
+    |> maybe_transform_for_vertex(anthropic.vertex)
   end
 
   defp maybe_transform_for_bedrock(body, nil), do: body
@@ -735,6 +744,14 @@ defmodule LangChain.ChatModels.ChatAnthropic do
   defp maybe_transform_for_bedrock(body, %BedrockConfig{} = bedrock) do
     body
     |> Map.put(:anthropic_version, bedrock.anthropic_version)
+    |> Map.drop([:model, :stream])
+  end
+
+  defp maybe_transform_for_vertex(body, nil), do: body
+
+  defp maybe_transform_for_vertex(body, %VertexAnthropicConfig{} = vertex) do
+    body
+    |> Map.put(:anthropic_version, vertex.anthropic_version)
     |> Map.drop([:model, :stream])
   end
 
@@ -1126,8 +1143,25 @@ defmodule LangChain.ChatModels.ChatAnthropic do
     api_key || Config.resolve(:anthropic_key, "")
   end
 
+  defp headers(%ChatAnthropic{vertex: %VertexAnthropicConfig{} = vertex, beta_headers: beta_headers}) do
+    %{
+      "authorization" => "Bearer " <> VertexAnthropicConfig.token(vertex),
+      "content-type" => "application/json"
+    }
+    |> Utils.conditionally_add_to_map(
+      "anthropic-beta",
+      if(!Enum.empty?(beta_headers), do: Enum.join(beta_headers, ","))
+    )
+  end
+
+  defp headers(%ChatAnthropic{bedrock: %BedrockConfig{}}) do
+    %{
+      "content-type" => "application/json",
+      "accept" => "application/json"
+    }
+  end
+
   defp headers(%ChatAnthropic{
-         bedrock: nil,
          api_key: api_key,
          api_version: api_version,
          beta_headers: beta_headers
@@ -1143,19 +1177,16 @@ defmodule LangChain.ChatModels.ChatAnthropic do
     )
   end
 
-  defp headers(%ChatAnthropic{bedrock: %BedrockConfig{}}) do
-    %{
-      "content-type" => "application/json",
-      "accept" => "application/json"
-    }
-  end
-
-  defp url(%ChatAnthropic{bedrock: nil} = anthropic) do
-    anthropic.endpoint
+  defp url(%ChatAnthropic{vertex: %VertexAnthropicConfig{} = vertex, stream: stream} = anthropic) do
+    VertexAnthropicConfig.url(vertex, model: anthropic.model, stream: stream)
   end
 
   defp url(%ChatAnthropic{bedrock: %BedrockConfig{} = bedrock, stream: stream} = anthropic) do
     BedrockConfig.url(bedrock, model: anthropic.model, stream: stream)
+  end
+
+  defp url(%ChatAnthropic{} = anthropic) do
+    anthropic.endpoint
   end
 
   # Parse a new message response
